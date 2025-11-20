@@ -86,6 +86,10 @@ pub async fn post_transaction(
     State(state): State<AppState>,
     Json(payload): Json<TransactionLines>,
 ) -> Result<Json<TransactionResponse>, axum::http::StatusCode> {
+    // Bind the dates to variables to ensure they live long enough
+    let invoice_date = payload.InvoiceDate.map(|dt| dt.to_rfc3339());
+    let due_date = payload.DueDate.map(|dt| dt.to_rfc3339());
+
     // Use `sqlx::query!` for compile-time checking of the SQL query
     let result = sqlx::query!(
         r#"
@@ -96,8 +100,8 @@ pub async fn post_transaction(
         "#,
         payload.InvoiceNumber,
         payload.Supplier,
-        payload.InvoiceDate.map(|dt| dt.to_rfc3339()),
-        payload.DueDate.map(|dt| dt.to_rfc3339()),
+        invoice_date,    // Use the pre-bound variable
+        due_date,        // Use the pre-bound variable
         payload.TransactionValueNOK,
         payload.SpendCategoryL1,
         payload.SpendCategoryL2,
@@ -114,8 +118,8 @@ pub async fn post_transaction(
         id,
         InvoiceNumber: payload.InvoiceNumber,
         Supplier: payload.Supplier,
-        InvoiceDate: payload.InvoiceDate.map(|dt| dt.to_rfc3339()),
-        DueDate: payload.DueDate.map(|dt| dt.to_rfc3339()),
+        InvoiceDate: invoice_date,    // Use the pre-bound variable
+        DueDate: due_date,            // Use the pre-bound variable
         TransactionValueNOK: payload.TransactionValueNOK,
         SpendCategoryL1: payload.SpendCategoryL1,
         SpendCategoryL2: payload.SpendCategoryL2,
