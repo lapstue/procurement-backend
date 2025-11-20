@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         r#"
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            Suppplier TEXT NOT NULL,
+            Supplier TEXT NOT NULL,
             InvoiceNumber TEXT NOT NULL,
             InvoiceDate TEXT,
             DueDate TEXT,
@@ -58,6 +58,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Running on http://{}", addr);
 
     axum::serve(listener, app).await?;
-
     Ok(())
 }
