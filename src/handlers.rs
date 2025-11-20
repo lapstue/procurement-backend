@@ -167,3 +167,39 @@ pub async fn get_transaction_by_id(
 
     Ok(Json(row.into_response()))
 }
+
+// Get the total amount spent (sum of TransactionValueNOK)
+pub async fn get_total_spent(
+    State(state): State<AppState>,
+) -> Result<Json<f64>, axum::http::StatusCode> {
+    // Extract the total_spent value from the Record
+    let result = sqlx::query!(
+        r#"
+        SELECT SUM(TransactionValueNOK) AS total_spent FROM transactions
+        "#,
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Ensure we extract the `total_spent` field
+    Ok(Json(result.total_spent.unwrap_or(0.0))) // Use `unwrap_or` in case `total_spent` is NULL
+}
+
+// Get the total number of suppliers
+pub async fn get_total_suppliers(
+    State(state): State<AppState>,
+) -> Result<Json<i64>, axum::http::StatusCode> {
+    // Extract the total_suppliers value from the Record
+    let result = sqlx::query!(
+        r#"
+        SELECT COUNT(*) AS total_suppliers FROM suppliers
+        "#,
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Ensure we extract the `total_suppliers` field
+    Ok(Json(result.total_suppliers as i64))
+}
