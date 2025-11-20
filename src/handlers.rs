@@ -78,12 +78,13 @@ pub async fn post_transaction(
     let result = sqlx::query(
         r#"
         INSERT INTO transactions
-        (InvoiceNumber, InvoiceDate, DueDate, TransactionValueNOK,
+        (InvoiceNumber, Supplier, InvoiceDate, DueDate, TransactionValueNOK,
          SpendCategoryL1, SpendCategoryL2, SpendCategoryL3, SpendCategoryL4)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
         "#,
     )
     .bind(&payload.InvoiceNumber)
+    .bind(&payload.Supplier)
     .bind(&payload.InvoiceDate.map(|dt| dt.to_rfc3339()))
     .bind(&payload.DueDate.map(|dt| dt.to_rfc3339()))
     .bind(payload.TransactionValueNOK)
@@ -100,6 +101,7 @@ pub async fn post_transaction(
     let db_row = TransactionDbRow {
         id,
         InvoiceNumber: payload.InvoiceNumber,
+        Supplier: payload.Supplier,
         InvoiceDate: payload.InvoiceDate.map(|dt| dt.to_rfc3339()),
         DueDate: payload.DueDate.map(|dt| dt.to_rfc3339()),
         TransactionValueNOK: payload.TransactionValueNOK,
@@ -116,7 +118,7 @@ pub async fn get_transactions(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<TransactionResponse>>, axum::http::StatusCode> {
     let rows: Vec<TransactionDbRow> = sqlx::query_as(
-        "SELECT id, InvoiceNumber, InvoiceDate, DueDate, TransactionValueNOK, SpendCategoryL1, SpendCategoryL2, SpendCategoryL3, SpendCategoryL4 FROM transactions"
+        "SELECT id, Supplier, InvoiceNumber, InvoiceDate, DueDate, TransactionValueNOK, SpendCategoryL1, SpendCategoryL2, SpendCategoryL3, SpendCategoryL4 FROM transactions"
     )
     .fetch_all(&state.db)
     .await
@@ -130,7 +132,7 @@ pub async fn get_transaction_by_id(
     Path(id): Path<i64>,
 ) -> Result<Json<TransactionResponse>, axum::http::StatusCode> {
     let row: TransactionDbRow = sqlx::query_as(
-        "SELECT id, InvoiceNumber, InvoiceDate, DueDate, TransactionValueNOK, SpendCategoryL1, SpendCategoryL2, SpendCategoryL3, SpendCategoryL4 FROM transactions WHERE id = ?1"
+        "SELECT id, Supplier, InvoiceNumber, InvoiceDate, DueDate, TransactionValueNOK, SpendCategoryL1, SpendCategoryL2, SpendCategoryL3, SpendCategoryL4 FROM transactions WHERE id = ?1"
     )
     .bind(id)
     .fetch_one(&state.db)

@@ -47,6 +47,7 @@ impl From<SupplierDbRow> for SupplierResponse {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct TransactionLines {
     pub InvoiceNumber: String,
+    pub Supplier : String,
     pub InvoiceDate: Option<DateTime<Utc>>,
     pub DueDate: Option<DateTime<Utc>>,
     pub TransactionValueNOK: f32,
@@ -60,6 +61,7 @@ pub struct TransactionLines {
 pub struct TransactionDbRow {
     pub id: i64,
     pub InvoiceNumber: String,
+    pub Supplier : String,
     pub InvoiceDate: Option<String>,
     pub DueDate: Option<String>,
     pub TransactionValueNOK: f32,
@@ -73,6 +75,7 @@ pub struct TransactionDbRow {
 pub struct TransactionResponse {
     pub id: i64,
     pub InvoiceNumber: String,
+    pub Supplier : String,
     pub InvoiceDate: Option<DateTime<Utc>>,
     pub DueDate: Option<DateTime<Utc>>,
     pub TransactionValueNOK: f32,
@@ -87,6 +90,7 @@ impl TransactionDbRow {
         TransactionResponse {
             id: self.id,
             InvoiceNumber: self.InvoiceNumber,
+            Supplier : self.Supplier,
             InvoiceDate: self
                 .InvoiceDate
                 .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())

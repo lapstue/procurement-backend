@@ -34,6 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         r#"
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            Suppplier TEXT NOT NULL,
             InvoiceNumber TEXT NOT NULL,
             InvoiceDate TEXT,
             DueDate TEXT,
