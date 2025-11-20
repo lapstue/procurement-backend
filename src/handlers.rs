@@ -2,7 +2,7 @@
 
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, State}, response::Html,
 };
 
 use crate::models::{
@@ -202,4 +202,125 @@ pub async fn get_total_suppliers(
 
     // Ensure we extract the `total_suppliers` field
     Ok(Json(result.total_suppliers as i64))
+}
+
+pub async fn serve_dashboard() -> Html<&'static str> {
+    let html = r#"
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Procurement Dashboard</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                    background-color: #f4f4f9;
+                }
+                .header-box {
+                    display: inline-block;
+                    width: 48%;
+                    padding: 20px;
+                    margin: 10px;
+                    background-color: #2d2d2d;
+                    color: white;
+                    text-align: center;
+                    border-radius: 8px;
+                }
+                .header-box h3 {
+                    margin: 0;
+                    font-size: 24px;
+                }
+                .header-box p {
+                    font-size: 30px;
+                    margin: 10px 0 0;
+                }
+                .transaction-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 30px;
+                }
+                .transaction-table th, .transaction-table td {
+                    border: 1px solid #ddd;
+                    padding: 12px;
+                    text-align: left;
+                }
+                .transaction-table th {
+                    background-color: #f4f4f9;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>Procurement Dashboard</h1>
+            
+            <div class="header-box" id="total-spent">
+                <h3>Total Spent (NOK)</h3>
+                <p>Loading...</p>
+            </div>
+
+            <div class="header-box" id="total-suppliers">
+                <h3>Total Suppliers</h3>
+                <p>Loading...</p>
+            </div>
+
+            <h2>Transactions</h2>
+            <table class="transaction-table" id="transaction-table">
+                <thead>
+                    <tr>
+                        <th>Invoice Number</th>
+                        <th>Supplier</th>
+                        <th>Invoice Date</th>
+                        <th>Transaction Value (NOK)</th>
+                        <th>Spend Category L1</th>
+                        <th>Spend Category L2</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Transaction rows will be populated here -->
+                </tbody>
+            </table>
+
+            <script>
+                // Function to fetch data and update the UI
+                async function fetchData() {
+                    try {
+                        const totalSpentRes = await fetch('/transactions/total_spent');
+                        const totalSpent = await totalSpentRes.json();
+                        document.getElementById('total-spent').querySelector('p').textContent = totalSpent;
+
+                        const totalSuppliersRes = await fetch('/suppliers/total_suppliers');
+                        const totalSuppliers = await totalSuppliersRes.json();
+                        document.getElementById('total-suppliers').querySelector('p').textContent = totalSuppliers;
+
+                        const transactionsRes = await fetch('/transactions');
+                        const transactions = await transactionsRes.json();
+
+                        const tableBody = document.getElementById('transaction-table').querySelector('tbody');
+                        tableBody.innerHTML = ''; // Clear any existing rows
+                        transactions.forEach(transaction => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${transaction.InvoiceNumber}</td>
+                                <td>${transaction.Supplier}</td>
+                                <td>${transaction.InvoiceDate}</td>
+                                <td>${transaction.TransactionValueNOK}</td>
+                                <td>${transaction.SpendCategoryL1}</td>
+                                <td>${transaction.SpendCategoryL2}</td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    } catch (error) {
+                        console.error("Error fetching data:", error);
+                    }
+                }
+
+                // Fetch data when the page loads
+                window.onload = fetchData;
+            </script>
+        </body>
+        </html>
+    "#;
+
+    Html(html) // Return the HTML content properly as an HTML response
 }

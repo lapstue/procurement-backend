@@ -9,7 +9,8 @@ use tokio::net::TcpListener;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .nest("/suppliers", routers::get_supplier_router())
-        .nest("/transactions", routers::get_transaction_router());
+        .nest("/transactions", routers::get_transaction_router())
+        .nest("/", routers::get_dashboard_router());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     let listener = TcpListener::bind(addr).await?;
