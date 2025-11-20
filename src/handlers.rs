@@ -14,17 +14,18 @@ pub async fn post_supplier(
     State(state): State<AppState>,
     Json(payload): Json<SupplierLines>,
 ) -> Result<Json<SupplierResponse>, axum::http::StatusCode> {
-    let result = sqlx::query(
+    // Use `sqlx::query!` for compile-time checking of the SQL query
+    let result = sqlx::query!(
         r#"
         INSERT INTO suppliers (Supplier, SupplierNameOriginal, SupplierCountry, VatID, NACE)
         VALUES (?1, ?2, ?3, ?4, ?5)
         "#,
+        payload.Supplier,
+        payload.SupplierNameOriginal,
+        payload.SupplierCountry,
+        payload.VatID,
+        payload.NACE,
     )
-    .bind(&payload.Supplier)
-    .bind(&payload.SupplierNameOriginal)
-    .bind(&payload.SupplierCountry)
-    .bind(&payload.VatID)
-    .bind(&payload.NACE)
     .execute(&state.db)
     .await
     .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -44,8 +45,13 @@ pub async fn post_supplier(
 pub async fn get_suppliers(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<SupplierResponse>>, axum::http::StatusCode> {
-    let rows: Vec<SupplierDbRow> = sqlx::query_as(
-        "SELECT id, Supplier, SupplierNameOriginal, SupplierCountry, VatID, NACE FROM suppliers",
+    // Use `sqlx::query_as!` for compile-time checking and automatic deserialization
+    let rows: Vec<SupplierDbRow> = sqlx::query_as!(
+        SupplierDbRow,
+        r#"
+        SELECT id, Supplier, SupplierNameOriginal, SupplierCountry, VatID, NACE
+        FROM suppliers
+        "#,
     )
     .fetch_all(&state.db)
     .await
@@ -58,10 +64,15 @@ pub async fn get_supplier_by_id(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<SupplierResponse>, axum::http::StatusCode> {
-    let row: SupplierDbRow = sqlx::query_as(
-        "SELECT id, Supplier, SupplierNameOriginal, SupplierCountry, VatID, NACE FROM suppliers WHERE id = ?1"
+    // Use `sqlx::query_as!` for compile-time checking
+    let row: SupplierDbRow = sqlx::query_as!(
+        SupplierDbRow,
+        r#"
+        SELECT id, Supplier, SupplierNameOriginal, SupplierCountry, VatID, NACE
+        FROM suppliers WHERE id = ?1
+        "#,
+        id,
     )
-    .bind(id)
     .fetch_one(&state.db)
     .await
     .map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
@@ -75,23 +86,24 @@ pub async fn post_transaction(
     State(state): State<AppState>,
     Json(payload): Json<TransactionLines>,
 ) -> Result<Json<TransactionResponse>, axum::http::StatusCode> {
-    let result = sqlx::query(
+    // Use `sqlx::query!` for compile-time checking of the SQL query
+    let result = sqlx::query!(
         r#"
         INSERT INTO transactions
         (InvoiceNumber, Supplier, InvoiceDate, DueDate, TransactionValueNOK,
          SpendCategoryL1, SpendCategoryL2, SpendCategoryL3, SpendCategoryL4)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
         "#,
+        payload.InvoiceNumber,
+        payload.Supplier,
+        payload.InvoiceDate.map(|dt| dt.to_rfc3339()),
+        payload.DueDate.map(|dt| dt.to_rfc3339()),
+        payload.TransactionValueNOK,
+        payload.SpendCategoryL1,
+        payload.SpendCategoryL2,
+        payload.SpendCategoryL3,
+        payload.SpendCategoryL4,
     )
-    .bind(&payload.InvoiceNumber)
-    .bind(&payload.Supplier)
-    .bind(&payload.InvoiceDate.map(|dt| dt.to_rfc3339()))
-    .bind(&payload.DueDate.map(|dt| dt.to_rfc3339()))
-    .bind(payload.TransactionValueNOK)
-    .bind(&payload.SpendCategoryL1)
-    .bind(&payload.SpendCategoryL2)
-    .bind(&payload.SpendCategoryL3)
-    .bind(&payload.SpendCategoryL4)
     .execute(&state.db)
     .await
     .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -117,8 +129,13 @@ pub async fn post_transaction(
 pub async fn get_transactions(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<TransactionResponse>>, axum::http::StatusCode> {
-    let rows: Vec<TransactionDbRow> = sqlx::query_as(
-        "SELECT id, Supplier, InvoiceNumber, InvoiceDate, DueDate, TransactionValueNOK, SpendCategoryL1, SpendCategoryL2, SpendCategoryL3, SpendCategoryL4 FROM transactions"
+    // Use `sqlx::query_as!` for compile-time checking
+    let rows: Vec<TransactionDbRow> = sqlx::query_as!(
+        TransactionDbRow,
+        r#"
+        SELECT id, Supplier, InvoiceNumber, InvoiceDate, DueDate, TransactionValueNOK, SpendCategoryL1, SpendCategoryL2, SpendCategoryL3, SpendCategoryL4
+        FROM transactions
+        "#,
     )
     .fetch_all(&state.db)
     .await
@@ -131,10 +148,15 @@ pub async fn get_transaction_by_id(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<TransactionResponse>, axum::http::StatusCode> {
-    let row: TransactionDbRow = sqlx::query_as(
-        "SELECT id, Supplier, InvoiceNumber, InvoiceDate, DueDate, TransactionValueNOK, SpendCategoryL1, SpendCategoryL2, SpendCategoryL3, SpendCategoryL4 FROM transactions WHERE id = ?1"
+    // Use `sqlx::query_as!` for compile-time checking
+    let row: TransactionDbRow = sqlx::query_as!(
+        TransactionDbRow,
+        r#"
+        SELECT id, Supplier, InvoiceNumber, InvoiceDate, DueDate, TransactionValueNOK, SpendCategoryL1, SpendCategoryL2, SpendCategoryL3, SpendCategoryL4
+        FROM transactions WHERE id = ?1
+        "#,
+        id,
     )
-    .bind(id)
     .fetch_one(&state.db)
     .await
     .map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
