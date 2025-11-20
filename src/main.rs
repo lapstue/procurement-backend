@@ -1,119 +1,19 @@
+mod models;
+
 use std::net::SocketAddr;
 
 use axum::{
+    Json, Router,
     extract::{Path, State},
     routing::{get, post},
-    Json, Router,
 };
-use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
+use sqlx::sqlite::SqlitePoolOptions;
 use tokio::net::TcpListener;
-use chrono::{DateTime, Utc};
 
-#[derive(Deserialize, Serialize, Debug)]
-struct SupplierLines {
-    Supplier: String,
-    SupplierNameOriginal: String,
-    SupplierCountry: String,
-    VatID: String,
-    NACE: String,
-}
-
-#[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
-struct SupplierDbRow {
-    id: i64,
-    Supplier: String,
-    SupplierNameOriginal: String,
-    SupplierCountry: String,
-    VatID: String,
-    NACE: String,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct SupplierResponse {
-    id: i64,
-    Supplier: String,
-    SupplierNameOriginal: String,
-    SupplierCountry: String,
-    VatID: String,
-    NACE: String,
-}
-
-impl From<SupplierDbRow> for SupplierResponse {
-    fn from(row: SupplierDbRow) -> Self {
-        SupplierResponse {
-            id: row.id,
-            Supplier: row.Supplier,
-            SupplierNameOriginal: row.SupplierNameOriginal,
-            SupplierCountry: row.SupplierCountry,
-            VatID: row.VatID,
-            NACE: row.NACE,
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct TransactionLines {
-    InvoiceNumber: String,
-    InvoiceDate: Option<DateTime<Utc>>,
-    DueDate: Option<DateTime<Utc>>,
-    TransactionValueNOK: f32,
-    SpendCategoryL1: String,
-    SpendCategoryL2: String,
-    SpendCategoryL3: String,
-    SpendCategoryL4: String,
-}
-
-#[derive(sqlx::FromRow)]
-struct TransactionDbRow {
-    id: i64,
-    InvoiceNumber: String,
-    InvoiceDate: Option<String>,
-    DueDate: Option<String>,
-    TransactionValueNOK: f32,
-    SpendCategoryL1: String,
-    SpendCategoryL2: String,
-    SpendCategoryL3: String,
-    SpendCategoryL4: String,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-struct TransactionResponse {
-    id: i64,
-    InvoiceNumber: String,
-    InvoiceDate: Option<DateTime<Utc>>,
-    DueDate: Option<DateTime<Utc>>,
-    TransactionValueNOK: f32,
-    SpendCategoryL1: String,
-    SpendCategoryL2: String,
-    SpendCategoryL3: String,
-    SpendCategoryL4: String,
-}
-
-impl TransactionDbRow {
-    fn into_response(self) -> TransactionResponse {
-        TransactionResponse {
-            id: self.id,
-            InvoiceNumber: self.InvoiceNumber,
-            InvoiceDate: self.InvoiceDate
-                .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                .map(|dt| dt.with_timezone(&Utc)),
-            DueDate: self.DueDate
-                .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                .map(|dt| dt.with_timezone(&Utc)),
-            TransactionValueNOK: self.TransactionValueNOK,
-            SpendCategoryL1: self.SpendCategoryL1,
-            SpendCategoryL2: self.SpendCategoryL2,
-            SpendCategoryL3: self.SpendCategoryL3,
-            SpendCategoryL4: self.SpendCategoryL4,
-        }
-    }
-}
-
-#[derive(Clone)]
-struct AppState {
-    db: Pool<Sqlite>,
-}
+use crate::models::{
+    AppState, SupplierDbRow, SupplierLines, SupplierResponse, TransactionDbRow, TransactionLines,
+    TransactionResponse,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -133,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             VatID TEXT NOT NULL,
             NACE TEXT NOT NULL
         );
-        "#
+        "#,
     )
     .execute(&db)
     .await?;
@@ -152,17 +52,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             SpendCategoryL3 TEXT NOT NULL,
             SpendCategoryL4 TEXT NOT NULL
         );
-        "#
+        "#,
     )
     .execute(&db)
     .await?;
 
-    let app_state = AppState { db };
+    let app_state = models::AppState { db };
 
     let app = Router::new()
         .route("/suppliers", post(post_supplier).get(get_suppliers))
         .route("/suppliers/:id", get(get_supplier_by_id))
-        .route("/transactions", post(post_transaction).get(get_transactions))
+        .route(
+            "/transactions",
+            post(post_transaction).get(get_transactions),
+        )
         .route("/transactions/:id", get(get_transaction_by_id))
         .with_state(app_state);
 
@@ -185,7 +88,7 @@ async fn post_supplier(
         r#"
         INSERT INTO suppliers (Supplier, SupplierNameOriginal, SupplierCountry, VatID, NACE)
         VALUES (?1, ?2, ?3, ?4, ?5)
-        "#
+        "#,
     )
     .bind(&payload.Supplier)
     .bind(&payload.SupplierNameOriginal)
@@ -212,7 +115,7 @@ async fn get_suppliers(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<SupplierResponse>>, axum::http::StatusCode> {
     let rows: Vec<SupplierDbRow> = sqlx::query_as(
-        "SELECT id, Supplier, SupplierNameOriginal, SupplierCountry, VatID, NACE FROM suppliers"
+        "SELECT id, Supplier, SupplierNameOriginal, SupplierCountry, VatID, NACE FROM suppliers",
     )
     .fetch_all(&state.db)
     .await
@@ -248,7 +151,7 @@ async fn post_transaction(
         (InvoiceNumber, InvoiceDate, DueDate, TransactionValueNOK,
          SpendCategoryL1, SpendCategoryL2, SpendCategoryL3, SpendCategoryL4)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-        "#
+        "#,
     )
     .bind(&payload.InvoiceNumber)
     .bind(&payload.InvoiceDate.map(|dt| dt.to_rfc3339()))
